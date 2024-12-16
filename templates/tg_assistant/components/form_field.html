@@ -1,0 +1,16 @@
+{% load form_filters %}
+
+<div>
+    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
+        {{ label }}
+    </label>
+    <div class="mt-1">
+        {{ field|add_class:"block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" }}
+    </div>
+    {% if field.errors %}
+    <p class="mt-2 text-sm text-red-600">{{ field.errors.0 }}</p>
+    {% endif %}
+    {% if help_text %}
+    <p class="mt-2 text-sm text-gray-500">{{ help_text }}</p>
+    {% endif %}
+</div>

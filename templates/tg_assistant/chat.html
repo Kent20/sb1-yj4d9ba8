@@ -1,0 +1,275 @@
+{% extends 'tg_assistant/base.html' %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+    <!-- Chat List -->
+    <div class="w-1/4 bg-white border-r flex flex-col">
+        <!-- Chat List Header -->
+        <div class="p-4 border-b">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">Чаты</h2>
+                <button onclick="syncChats()" class="text-blue-500 hover:text-blue-600">
+                    <i class="fas fa-sync"></i>
+                </button>
+            </div>
+            <div class="relative">
+                <input type="text" 
+                       id="chat-search"
+                       placeholder="Поиск чатов..."
+                       class="w-full px-4 py-2 border rounded-lg">
+                <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+            </div>
+        </div>
+
+        <!-- Chat List -->
+        <div class="overflow-y-auto flex-1" id="chat-list">
+            {% for chat in chats %}
+            <a href="{% url 'chat-detail' chat.id %}" 
+               class="block hover:bg-gray-50 {% if current_chat.id == chat.id %}bg-gray-100{% endif %}">
+                <div class="p-4 border-b">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white">
+                            {{ chat.chat_title|slice:":2"|upper }}
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <div class="font-medium">{{ chat.chat_title }}</div>
+                                    <div class="text-sm text-gray-500">
+                                        {% if chat.is_active %}
+                                        <span class="text-green-500">●</span> Активен
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if chat.unread_count > 0 %}
+                                <span class="bg-blue-500 text-white text-xs rounded-full px-2 py-1">
+                                    {{ chat.unread_count }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% if chat.last_message %}
+                            <p class="text-sm text-gray-600 truncate mt-1">
+                                {{ chat.last_message }}
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Chat Area -->
+    <div class="flex-1 flex flex-col">
+        {% if current_chat %}
+        <!-- Chat Header -->
+        <div class="p-4 border-b bg-white flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white">
+                    {{ current_chat.chat_title|slice:":2"|upper }}
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold">{{ current_chat.chat_title }}</h3>
+                    <div class="text-sm text-gray-500">
+                        {% if current_chat.is_active %}
+                        <span class="text-green-500">●</span> Активен
+                        {% if current_chat.auto_reply %}
+                        <span class="mx-2">•</span>
+                        <i class="fas fa-robot text-blue-500"></i> Автоответ
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="toggleAutoReply()" class="p-2 hover:bg-gray-100 rounded-full">
+                    <i class="fas fa-robot {% if current_chat.auto_reply %}text-blue-500{% endif %}"></i>
+                </button>
+                <button onclick="loadMoreMessages()" class="p-2 hover:bg-gray-100 rounded-full">
+                    <i class="fas fa-history"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Messages Area -->
+        <div class="flex-1 overflow-y-auto p-4" id="messages-container">
+            <div class="flex flex-col space-y-4">
+                <!-- Load More Button -->
+                <div class="text-center mb-4 hidden" id="load-more">
+                    <button onclick="loadMoreMessages()" 
+                            class="text-blue-500 hover:text-blue-600 text-sm">
+                        Загрузить предыдущие сообщения
+                    </button>
+                </div>
+
+                <!-- Messages -->
+                <div id="messages-list">
+                    {% for message in messages %}
+                    <div class="message {% if message.is_outgoing %}sent{% else %}received{% endif %}">
+                        <div class="flex {% if message.is_outgoing %}justify-end{% endif %}">
+                            <div class="max-w-[70%] rounded-lg p-3 {% if message.is_outgoing %}bg-blue-500 text-white{% else %}bg-white{% endif %}">
+                                <div class="text-sm {% if message.is_outgoing %}text-blue-100{% else %}text-gray-500{% endif %}">
+                                    {{ message.sender }}
+                                </div>
+                                <div class="mt-1">{{ message.message }}</div>
+                                <div class="text-xs {% if message.is_outgoing %}text-blue-200{% else %}text-gray-400{% endif %} text-right mt-1">
+                                    {{ message.timestamp|date:"H:i" }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Message Input -->
+        <div class="border-t bg-white p-4">
+            <form id="message-form" class="flex items-end space-x-2">
+                <div class="flex-1">
+                    <textarea id="message-input"
+                              class="w-full px-4 py-2 border rounded-lg resize-none"
+                              rows="1"
+                              placeholder="Введите сообщение..."></textarea>
+                </div>
+                <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+        </div>
+        {% else %}
+        <!-- Empty State -->
+        <div class="flex-1 flex items-center justify-center">
+            <div class="text-center">
+                <div class="text-gray-400 mb-4">
+                    <i class="fas fa-comments fa-3x"></i>
+                </div>
+                <p class="text-gray-500">Выберите чат для начала общения</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+let chatSocket = null;
+let page = 1;
+const messagesPerPage = 50;
+
+// Connect to WebSocket
+function connectWebSocket() {
+    const chatId = '{{ current_chat.id }}';
+    chatSocket = new WebSocket(
+        'ws://' + window.location.host + '/ws/chat/' + chatId + '/'
+    );
+
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        addMessage(data);
+    };
+
+    chatSocket.onclose = function(e) {
+        console.error('Chat socket closed unexpectedly');
+    };
+}
+
+// Add new message to chat
+function addMessage(data) {
+    const messagesList = document.getElementById('messages-list');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${data.is_outgoing ? 'sent' : 'received'}`;
+    
+    messageDiv.innerHTML = `
+        <div class="flex ${data.is_outgoing ? 'justify-end' : ''}">
+            <div class="max-w-[70%] rounded-lg p-3 ${data.is_outgoing ? 'bg-blue-500 text-white' : 'bg-white'}">
+                <div class="text-sm ${data.is_outgoing ? 'text-blue-100' : 'text-gray-500'}">
+                    ${data.sender}
+                </div>
+                <div class="mt-1">${data.message}</div>
+                <div class="text-xs ${data.is_outgoing ? 'text-blue-200' : 'text-gray-400'} text-right mt-1">
+                    ${new Date(data.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    messagesList.appendChild(messageDiv);
+    scrollToBottom();
+}
+
+// Load more messages
+async function loadMoreMessages() {
+    try {
+        const response = await fetch(`/chat/{{ current_chat.id }}/messages/?page=${page}`);
+        const data = await response.json();
+        
+        if (data.messages.length > 0) {
+            const messagesList = document.getElementById('messages-list');
+            data.messages.forEach(message => {
+                const messageDiv = document.createElement('div');
+                // Add message HTML similar to addMessage function
+                messagesList.prepend(messageDiv);
+            });
+            
+            page++;
+            
+            // Show/hide load more button
+            document.getElementById('load-more').classList.toggle(
+                'hidden',
+                data.messages.length < messagesPerPage
+            );
+        }
+    } catch (error) {
+        console.error('Error loading messages:', error);
+    }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    if ('{{ current_chat.id }}') {
+        connectWebSocket();
+        
+        // Handle message form
+        const messageForm = document.getElementById('message-form');
+        const messageInput = document.getElementById('message-input');
+        
+        messageForm.onsubmit = function(e) {
+            e.preventDefault();
+            const message = messageInput.value;
+            if (message) {
+                chatSocket.send(JSON.stringify({
+                    'message': message
+                }));
+                messageInput.value = '';
+            }
+        };
+        
+        // Auto-resize textarea
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+    }
+    
+    // Initialize chat search
+    const chatSearch = document.getElementById('chat-search');
+    chatSearch.addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        const chats = document.querySelectorAll('#chat-list a');
+        
+        chats.forEach(chat => {
+            const title = chat.querySelector('.font-medium').textContent.toLowerCase();
+            const message = chat.querySelector('.text-gray-600')?.textContent.toLowerCase() || '';
+            
+            chat.style.display = (title.includes(query) || message.includes(query)) ? 'block' : 'none';
+        });
+    });
+});
+
+function scrollToBottom() {
+    const container = document.getElementById('messages-container');
+    container.scrollTop = container.scrollHeight;
+}
+</script>
+{% endblock %}

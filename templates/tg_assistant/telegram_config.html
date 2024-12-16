@@ -1,0 +1,126 @@
+{% extends 'tg_assistant/base.html' %}
+{% load form_filters %}
+
+{% block title %}Настройки Telegram{% endblock %}
+{% block header %}Настройки Telegram{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Статус подключения -->
+    <div class="mb-6 bg-white rounded-lg shadow p-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Статус подключения</h2>
+        <div class="flex items-center space-x-4">
+            <div class="flex-shrink-0">
+                <div class="w-4 h-4 rounded-full {% if telegram_config and telegram_config.is_active %}bg-green-500{% else %}bg-red-500{% endif %}"></div>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-gray-900">
+                    {% if telegram_config and telegram_config.is_active %}
+                        Подключено
+                    {% else %}
+                        Отключено
+                    {% endif %}
+                </p>
+                {% if telegram_config %}
+                <p class="text-sm text-gray-500">Телефон: {{ telegram_config.phone }}</p>
+                {% endif %}
+            </div>
+            <div class="flex-grow"></div>
+            <div class="flex space-x-3">
+                {% if telegram_config and not telegram_config.is_active %}
+                <form method="post" action="{% url 'start-telegram' %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                        <i class="fas fa-play mr-2"></i> Запустить
+                    </button>
+                </form>
+                {% endif %}
+                {% if telegram_config and telegram_config.is_active %}
+                <form method="post" action="{% url 'stop-telegram' %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        <i class="fas fa-stop mr-2"></i> Остановить
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Форма настроек -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900">Настройки Telegram</h2>
+            <p class="mt-1 text-sm text-gray-500">Настройте учетные данные API Telegram</p>
+        </div>
+        <div class="p-6">
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                <!-- API ID -->
+                <div>
+                    <label for="{{ form.api_id.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        API ID
+                    </label>
+                    <div class="mt-1">
+                        {{ form.api_id|add_class:"block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" }}
+                    </div>
+                    {% if form.api_id.errors %}
+                    <p class="mt-2 text-sm text-red-600">{{ form.api_id.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-2 text-sm text-gray-500">Ваш API ID из my.telegram.org</p>
+                </div>
+
+                <!-- API Hash -->
+                <div>
+                    <label for="{{ form.api_hash.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        API Hash
+                    </label>
+                    <div class="mt-1">
+                        {{ form.api_hash|add_class:"block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" }}
+                    </div>
+                    {% if form.api_hash.errors %}
+                    <p class="mt-2 text-sm text-red-600">{{ form.api_hash.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-2 text-sm text-gray-500">Ваш API hash из my.telegram.org</p>
+                </div>
+
+                <!-- Номер телефона -->
+                <div>
+                    <label for="{{ form.phone.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Номер телефона
+                    </label>
+                    <div class="mt-1">
+                        {{ form.phone|add_class:"block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" }}
+                    </div>
+                    {% if form.phone.errors %}
+                    <p class="mt-2 text-sm text-red-600">{{ form.phone.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-2 text-sm text-gray-500">Ваш номер телефона в формате +7XXXXXXXXXX</p>
+                </div>
+
+                <!-- Имя сессии -->
+                <div>
+                    <label for="{{ form.session_name.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Имя сессии
+                    </label>
+                    <div class="mt-1">
+                        {{ form.session_name|add_class:"block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" }}
+                    </div>
+                    {% if form.session_name.errors %}
+                    <p class="mt-2 text-sm text-red-600">{{ form.session_name.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-2 text-sm text-gray-500">Название для вашей сессии (например, my_session)</p>
+                </div>
+
+                <!-- Кнопка сохранения -->
+                <div class="flex justify-end">
+                    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <i class="fas fa-save mr-2"></i> Сохранить настройки
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

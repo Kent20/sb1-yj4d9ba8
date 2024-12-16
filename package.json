@@ -1,0 +1,14 @@
+{
+  "name": "telegram-assistant",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "django": "4.2.7",
+    "telethon": "1.32.1",
+    "python-dotenv": "1.0.0",
+    "transformers": "4.35.2",
+    "torch": "2.1.1",
+    "numpy": "1.26.2",
+    "asgiref": "3.7.2"
+  }
+}

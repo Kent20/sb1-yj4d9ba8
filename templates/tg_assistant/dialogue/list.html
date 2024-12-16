@@ -1,0 +1,38 @@
+{% extends 'tg_assistant/base.html' %}
+
+{% block title %}Диалоги{% endblock %}
+{% block header %}История диалогов{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow overflow-hidden sm:rounded-lg">
+    <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+        <h2 class="text-lg leading-6 font-medium text-gray-900">
+            История диалогов
+        </h2>
+        <a href="{% url 'upload-dialogues' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+            <i class="fas fa-upload mr-2"></i>
+            Загрузить диалоги
+        </a>
+    </div>
+    
+    <div class="border-t border-gray-200">
+        <ul class="divide-y divide-gray-200">
+            {% for dialogue in dialogues %}
+            <li class="px-4 py-4">
+                {% include "tg_assistant/components/dialogue_item.html" with dialogue=dialogue %}
+            </li>
+            {% empty %}
+            <li class="px-4 py-4 text-center text-gray-500">
+                Нет диалогов. Загрузите данные диалогов, чтобы начать.
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+{% if is_paginated %}
+<div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+    {% include "tg_assistant/components/pagination.html" %}
+</div>
+{% endif %}
+{% endblock %}

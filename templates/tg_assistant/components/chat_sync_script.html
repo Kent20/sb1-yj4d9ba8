@@ -1,0 +1,36 @@
+{% load static %}
+<script>
+async function syncChats() {
+    const button = document.querySelector('button');
+    const originalContent = button.innerHTML;
+    
+    try {
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Обновление...';
+        
+        const response = await fetch('{% url "sync-chats" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        });
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            console.error('Ошибка при обновлении чатов:', data.message);
+        }
+    } catch (error) {
+        console.error('Ошибка при обновлении чатов:', error);
+    } finally {
+        button.disabled = false;
+        button.innerHTML = originalContent;
+    }
+}
+
+{% if auto_refresh %}
+// Auto refresh every 30 seconds
+setInterval(syncChats, 30000);
+{% endif %}
+</script>

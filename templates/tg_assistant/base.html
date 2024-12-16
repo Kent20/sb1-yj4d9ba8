@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Ассистент - {% block title %}Панель управления{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex">
+        <!-- Боковое меню -->
+        <div class="fixed inset-y-0 left-0 w-64 bg-indigo-700">
+            <div class="flex items-center justify-center h-16 bg-indigo-800">
+                <span class="text-white text-xl font-bold">Telegram Ассистент</span>
+            </div>
+            <nav class="mt-5">
+                <a href="{% url 'dashboard' %}" class="group flex items-center px-4 py-2 text-gray-100 hover:bg-indigo-600">
+                    <i class="fas fa-home w-6"></i>
+                    <span class="ml-2">Главная</span>
+                </a>
+                <a href="{% url 'dialogue-list' %}" class="group flex items-center px-4 py-2 text-gray-100 hover:bg-indigo-600">
+                    <i class="fas fa-comments w-6"></i>
+                    <span class="ml-2">Диалоги</span>
+                </a>
+                <a href="{% url 'chat-list' %}" class="group flex items-center px-4 py-2 text-gray-100 hover:bg-indigo-600">
+                    <i class="fas fa-comment-dots w-6"></i>
+                    <span class="ml-2">Чаты</span>
+                </a>
+                <a href="{% url 'captured-chats' %}" class="group flex items-center px-4 py-2 text-gray-100 hover:bg-indigo-600">
+                    <i class="fas fa-robot w-6"></i>
+                    <span class="ml-2">Активные чаты</span>
+                </a>
+                <a href="{% url 'telegram-config' %}" class="group flex items-center px-4 py-2 text-gray-100 hover:bg-indigo-600">
+                    <i class="fas fa-cog w-6"></i>
+                    <span class="ml-2">Настройки</span>
+                </a>
+                <a href="{% url 'upload-dialogues' %}" class="group flex items-center px-4 py-2 text-gray-100 hover:bg-indigo-600">
+                    <i class="fas fa-upload w-6"></i>
+                    <span class="ml-2">Загрузка данных</span>
+                </a>
+                <a href="{% url 'admin:index' %}" class="group flex items-center px-4 py-2 text-gray-100 hover:bg-indigo-600">
+                    <i class="fas fa-user-shield w-6"></i>
+                    <span class="ml-2">Админ панель</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Основной контент -->
+        <div class="flex-1 ml-64">
+            <div class="bg-white h-16 shadow-sm flex items-center justify-between px-6">
+                <h1 class="text-xl font-semibold text-gray-800">{% block header %}Панель управления{% endblock %}</h1>
+                <div class="flex items-center">
+                    <span class="text-gray-600">{{ request.user.username }}</span>
+                </div>
+            </div>
+
+            <div class="p-6">
+                {% if messages %}
+                <div class="mb-4">
+                    {% for message in messages %}
+                    <div class="p-4 {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %} rounded-lg">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

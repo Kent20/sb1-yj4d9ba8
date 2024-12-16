@@ -1,0 +1,27 @@
+{% extends 'tg_assistant/base.html' %}
+{% load chat_tags %}
+
+{% block title %}Захваченные чаты{% endblock %}
+{% block header %}Захваченные чаты{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow overflow-hidden sm:rounded-lg">
+    {% include "tg_assistant/components/chat_list_header.html" with title="Захваченные чаты" %}
+    
+    <div class="border-t border-gray-200">
+        <ul class="divide-y divide-gray-200" id="chats-list">
+            {% for chat in chats %}
+            <li class="px-4 py-4">
+                {% include "tg_assistant/components/chat_item.html" with chat=chat show_release=True %}
+            </li>
+            {% empty %}
+            <li class="px-4 py-4 text-center text-gray-500">
+                Нет захваченных чатов
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+{% include "tg_assistant/components/chat_sync_script.html" %}
+{% endblock %}

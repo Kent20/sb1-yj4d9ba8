@@ -1,0 +1,142 @@
+{% extends 'tg_assistant/base.html' %}
+
+{% block title %}Чаты{% endblock %}
+{% block header %}Непрочитанные чаты{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow overflow-hidden sm:rounded-lg">
+    <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+        <h2 class="text-lg leading-6 font-medium text-gray-900">
+            Непрочитанные чаты
+        </h2>
+        <button onclick="syncChats()" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+            <i class="fas fa-sync mr-2"></i>
+            Обновить чаты
+        </button>
+    </div>
+    
+    <div class="border-t border-gray-200">
+        <ul class="divide-y divide-gray-200" id="chats-list">
+            {% for chat in chats %}
+            <li class="px-4 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900">{{ chat.chat_title }}</h3>
+                        <p class="text-sm text-gray-500">
+                            {{ chat.get_chat_type_display }}
+                            {% if chat.unread_count > 0 %}
+                            <span class="ml-2 px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                                {{ chat.unread_count }} непрочитано
+                            </span>
+                            {% endif %}
+                        </p>
+                        {% if chat.last_message %}
+                        <p class="mt-1 text-sm text-gray-600">
+                            Последнее сообщение: {{ chat.last_message|truncatechars:50 }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    <div class="flex space-x-3">
+                        {% if not chat.is_active %}
+                        <form method="post" action="{% url 'capture-chat' %}" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="chat_id" value="{{ chat.chat_id }}">
+                            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700">
+                                <i class="fas fa-plus mr-2"></i>
+                                Захватить
+                            </button>
+                        </form>
+                        {% else %}
+                        <form method="post" action="{% url 'release-chat' chat.id %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700">
+                                <i class="fas fa-times mr-2"></i>
+                                Освободить
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </li>
+            {% empty %}
+            <li class="px-4 py-4 text-center text-gray-500" id="no-chats-message">
+                Нет непрочитанных чатов
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<script>
+// Автоматическое обновление каждые 30 секунд
+setInterval(syncChats, 30000);
+
+async function syncChats() {
+    const button = document.querySelector('button');
+    const originalContent = button.innerHTML;
+    
+    try {
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Обновление...';
+        
+        const response = await fetch('{% url "sync-chats" %}');
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            updateChatsList(data.chats);
+        } else {
+            console.error('Ошибка при обновлении чатов:', data.message);
+        }
+    } catch (error) {
+        console.error('Ошибка при обновлении чатов:', error);
+    } finally {
+        button.disabled = false;
+        button.innerHTML = originalContent;
+    }
+}
+
+function updateChatsList(chats) {
+    const chatsList = document.getElementById('chats-list');
+    const noChatsMessage = document.getElementById('no-chats-message');
+    
+    if (chats.length === 0) {
+        chatsList.innerHTML = `
+            <li class="px-4 py-4 text-center text-gray-500">
+                Нет непрочитанных чатов
+            </li>
+        `;
+        return;
+    }
+    
+    chatsList.innerHTML = chats.map(chat => `
+        <li class="px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900">${chat.title}</h3>
+                    <p class="text-sm text-gray-500">
+                        <span class="ml-2 px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                            ${chat.unread_count} непрочитано
+                        </span>
+                    </p>
+                    ${chat.last_message ? `
+                    <p class="mt-1 text-sm text-gray-600">
+                        Последнее сообщение: ${chat.last_message.substring(0, 50)}...
+                    </p>
+                    ` : ''}
+                </div>
+                <div class="flex space-x-3">
+                    <form method="post" action="{% url 'capture-chat' %}" class="inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="chat_id" value="${chat.id}">
+                        <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700">
+                            <i class="fas fa-plus mr-2"></i>
+                            Захватить
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </li>
+    `).join('');
+}
+</script>
+{% endblock %}

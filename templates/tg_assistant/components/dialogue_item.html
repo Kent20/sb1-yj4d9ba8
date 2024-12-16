@@ -1,0 +1,28 @@
+{% load dialogue_tags %}
+
+<div class="flex space-x-3">
+    <div class="flex-1 space-y-1">
+        <div class="flex items-center justify-between">
+            <h3 class="text-sm font-medium">{{ dialogue.sender }}</h3>
+            <p class="text-sm text-gray-500">{{ dialogue.timestamp|date:"d.m.Y H:i" }}</p>
+        </div>
+        <p class="text-sm text-gray-700">{{ dialogue.message }}</p>
+        {% if dialogue.suggested_responses.exists %}
+        <div class="mt-2">
+            <h4 class="text-xs font-medium text-gray-500">Предложенные ответы:</h4>
+            <ul class="mt-1 space-y-1">
+                {% for response in dialogue.suggested_responses.all %}
+                <li class="text-sm text-gray-600 {% if response.is_used %}font-medium{% endif %}">
+                    {{ response.response_text }}
+                    {% if response.is_used %}
+                    <span class="ml-2 text-green-500">
+                        <i class="fas fa-check"></i>
+                    </span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>

@@ -1,0 +1,229 @@
+{% extends 'tg_assistant/base.html' %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+    <!-- Chat Area -->
+    <div class="flex-1 flex flex-col">
+        <!-- Chat Header -->
+        <div class="p-4 border-b bg-white flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white">
+                    {{ chat.chat_title|slice:":2"|upper }}
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold">{{ chat.chat_title }}</h3>
+                    <div class="text-sm text-gray-500">
+                        {% if chat.is_active %}
+                        <span class="text-green-500">●</span> Активен
+                        {% if chat.auto_reply %}
+                        <span class="mx-2">•</span>
+                        <i class="fas fa-robot text-blue-500"></i> Автоответ
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="toggleAutoReply()" class="p-2 hover:bg-gray-100 rounded-full">
+                    <i class="fas fa-robot {% if chat.auto_reply %}text-blue-500{% endif %}"></i>
+                </button>
+                <button onclick="loadMoreMessages()" class="p-2 hover:bg-gray-100 rounded-full">
+                    <i class="fas fa-history"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Messages Area -->
+        <div class="flex-1 overflow-y-auto p-4" id="messages-container">
+            <div class="flex flex-col space-y-4">
+                <!-- Load More Button -->
+                <div class="text-center mb-4 {% if not has_more %}hidden{% endif %}" id="load-more">
+                    <button onclick="loadMoreMessages()" 
+                            class="text-blue-500 hover:text-blue-600 text-sm">
+                        Загрузить предыдущие сообщения
+                    </button>
+                </div>
+
+                <!-- Messages -->
+                <div id="messages-list">
+                    {% for message in messages %}
+                    <div class="message {% if message.is_outgoing %}sent{% else %}received{% endif %} mb-4">
+                        <div class="flex {% if message.is_outgoing %}justify-end{% endif %}">
+                            <div class="max-w-[70%] rounded-lg p-3 {% if message.is_outgoing %}bg-blue-500 text-white{% else %}bg-white{% endif %}">
+                                <div class="text-sm {% if message.is_outgoing %}text-blue-100{% else %}text-gray-500{% endif %}">
+                                    {{ message.sender }}
+                                </div>
+                                <div class="mt-1">{{ message.message }}</div>
+                                <div class="text-xs {% if message.is_outgoing %}text-blue-200{% else %}text-gray-400{% endif %} text-right mt-1">
+                                    {{ message.timestamp|date:"H:i" }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Message Input -->
+        <div class="border-t bg-white p-4">
+            <form id="message-form" class="flex items-end space-x-2">
+                {% csrf_token %}
+                <div class="flex-1">
+                    <textarea id="message-input"
+                              class="w-full px-4 py-2 border rounded-lg resize-none"
+                              rows="1"
+                              placeholder="Введите сообщение..."></textarea>
+                </div>
+                <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+let chatSocket = null;
+let page = 1;
+const messagesPerPage = 50;
+
+// Connect to WebSocket
+function connectWebSocket() {
+    const chatId = '{{ chat.id }}';
+    chatSocket = new WebSocket(
+        'ws://' + window.location.host + '/ws/chat/' + chatId + '/'
+    );
+
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        addMessage(data);
+        scrollToBottom();
+    };
+
+    chatSocket.onclose = function(e) {
+        console.error('Chat socket closed unexpectedly');
+        // Try to reconnect
+        setTimeout(connectWebSocket, 1000);
+    };
+}
+
+// Add new message
+function addMessage(data) {
+    const messagesList = document.getElementById('messages-list');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${data.is_outgoing ? 'sent' : 'received'} mb-4`;
+    
+    messageDiv.innerHTML = `
+        <div class="flex ${data.is_outgoing ? 'justify-end' : ''}">
+            <div class="max-w-[70%] rounded-lg p-3 ${data.is_outgoing ? 'bg-blue-500 text-white' : 'bg-white'}">
+                <div class="text-sm ${data.is_outgoing ? 'text-blue-100' : 'text-gray-500'}">
+                    ${data.sender}
+                </div>
+                <div class="mt-1">${data.message}</div>
+                <div class="text-xs ${data.is_outgoing ? 'text-blue-200' : 'text-gray-400'} text-right mt-1">
+                    ${new Date(data.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    messagesList.appendChild(messageDiv);
+}
+
+// Load more messages
+async function loadMoreMessages() {
+    try {
+        const response = await fetch(`/chat/{{ chat.id }}/messages/?page=${page}`);
+        const data = await response.json();
+        
+        if (data.messages.length > 0) {
+            const messagesList = document.getElementById('messages-list');
+            const fragment = document.createDocumentFragment();
+            
+            data.messages.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${msg.is_outgoing ? 'sent' : 'received'} mb-4`;
+                messageDiv.innerHTML = `
+                    <div class="flex ${msg.is_outgoing ? 'justify-end' : ''}">
+                        <div class="max-w-[70%] rounded-lg p-3 ${msg.is_outgoing ? 'bg-blue-500 text-white' : 'bg-white'}">
+                            <div class="text-sm ${msg.is_outgoing ? 'text-blue-100' : 'text-gray-500'}">
+                                ${msg.sender}
+                            </div>
+                            <div class="mt-1">${msg.message}</div>
+                            <div class="text-xs ${msg.is_outgoing ? 'text-blue-200' : 'text-gray-400'} text-right mt-1">
+                                ${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                fragment.prepend(messageDiv);
+            });
+            
+            messagesList.prepend(fragment);
+            page++;
+            
+            // Show/hide load more button
+            document.getElementById('load-more').classList.toggle(
+                'hidden',
+                data.messages.length < messagesPerPage
+            );
+        }
+    } catch (error) {
+        console.error('Error loading messages:', error);
+    }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    connectWebSocket();
+    
+    // Handle message form
+    const messageForm = document.getElementById('message-form');
+    const messageInput = document.getElementById('message-input');
+    
+    messageForm.onsubmit = function(e) {
+        e.preventDefault();
+        const message = messageInput.value.trim();
+        if (message && chatSocket) {
+            chatSocket.send(JSON.stringify({
+                'message': message
+            }));
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+        }
+    };
+    
+    // Auto-resize textarea
+    messageInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+    });
+    
+    // Initial scroll to bottom
+    scrollToBottom();
+});
+
+function scrollToBottom() {
+    const container = document.getElementById('messages-container');
+    container.scrollTop = container.scrollHeight;
+}
+
+async function toggleAutoReply() {
+    try {
+        const response = await fetch('/chat/{{ chat.id }}/toggle-auto-reply/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        });
+        
+        if (response.ok) {
+            location.reload();
+        }
+    } catch (error) {
+        console.error('Error toggling auto-reply:', error);
+    }
+}
+</script>
+{% endblock %}

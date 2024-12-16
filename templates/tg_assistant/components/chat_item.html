@@ -1,0 +1,44 @@
+{% load chat_tags %}
+<div class="flex items-center justify-between">
+    <div>
+        <h3 class="text-lg font-medium text-gray-900">{{ chat.chat_title }}</h3>
+        <p class="text-sm text-gray-500">
+            {{ chat.get_chat_type_display }}
+            {% if chat.unread_count > 0 %}
+            <span class="ml-2 px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                {{ chat.unread_count }} непрочитано
+            </span>
+            {% endif %}
+        </p>
+        {% if chat.last_message_text %}
+        <p class="mt-1 text-sm text-gray-600">
+            Последнее сообщение: {{ chat.last_message_text|truncatechars:50 }}
+        </p>
+        {% endif %}
+    </div>
+    <div class="flex space-x-3">
+        <a href="{% url 'chat-detail' chat.id %}" 
+           class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            <i class="fas fa-eye mr-2"></i>
+            Просмотр
+        </a>
+        {% if show_release %}
+        <form method="post" action="{% url 'release-chat' chat.id %}" class="inline">
+            {% csrf_token %}
+            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700">
+                <i class="fas fa-times mr-2"></i>
+                Освободить
+            </button>
+        </form>
+        {% elif not chat.is_active %}
+        <form method="post" action="{% url 'capture-chat' %}" class="inline">
+            {% csrf_token %}
+            <input type="hidden" name="chat_id" value="{{ chat.chat_id }}">
+            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700">
+                <i class="fas fa-plus mr-2"></i>
+                Захватить
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
